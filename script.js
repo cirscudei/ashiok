@@ -105,20 +105,33 @@ function striptags(OriginalString = ""){
 function getConditions(allProducts){
 	// https://store.tcgplayer.com/admin/product/manage/39065?OnlyMyInventory=true
 	console.log('getting conditions');
-	for(var i=0; i < 2; i++){
+	for(var i=0; i < 1; i++){ // only one for now
 		$.ajax({
 			url:'https://store.tcgplayer.com/admin/product/manage/'+allProducts[i]['id']+'?OnlyMyInventory=true'		
 		}).done(function(data){
-			var table = $(data).find('.display.sTable')
-			console.log(table);
-
+			var table = $(data).find('.display.sTable tbody')
+			var stock = [];
+			$(table).find('tr').each(function(){
+				var thisRow = [];
+				thisRow['condition'] = striptags($(this).find('td:first-child').html());
+				thisRow['quantity'] = $(this).find('td:nth-child(5n) input').val();
+				thisRow['price'] = $(this).find('td:nth-child(6n) input').val()
+				if(thisRow['quantity'] > 0){
+					stock.push(thisRow);
+				}
+				
+			});
+			allProducts[i]['stock'] = stock;
+			
 
 
 		});
+		//console.log(allProducts);
+		exportFile(allProducts);
 	}
 }
 
-
-// console.log(products);
-
-
+function exportFile(allProducts){
+	// export the excell file (CSV), for import into urza
+	console.log('exporting');
+}
