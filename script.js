@@ -62,10 +62,10 @@ function getProductsForPage() {
 		values['set'] = striptags(row[2]); /// caontains id, needed for call
 		values['rarity'] = striptags(row[3]);
 		values['number'] = striptags(row[4]);
-		values['stock'] = striptags(row[5]);
+		//values['stock'] = striptags(row[5]);
 		values['link'] = striptags(row[6]);
 		if(!id == ""){
-			products.push(values);
+			products[values['id']] = values;
 		}
 	});
 	return products;
@@ -106,6 +106,7 @@ function getConditions(allProducts){
 	// https://store.tcgplayer.com/admin/product/manage/39065?OnlyMyInventory=true
 	console.log('getting conditions');
 	for(var i=0; i < 1; i++){ // only one for now
+		console.log('getting stock for ' + allProducts[i]['name']);
 		$.ajax({
 			url:'https://store.tcgplayer.com/admin/product/manage/'+allProducts[i]['id']+'?OnlyMyInventory=true'		
 		}).done(function(data){
@@ -117,7 +118,7 @@ function getConditions(allProducts){
 				thisRow['quantity'] = $(this).find('td:nth-child(5n) input').val();
 				thisRow['price'] = $(this).find('td:nth-child(6n) input').val()
 				if(thisRow['quantity'] > 0){
-					stock.push(thisRow);
+					stock[allProducts[i]['id'] + "_" + thisRow['condition']] = thisRow;
 				}
 				
 			});
@@ -127,11 +128,35 @@ function getConditions(allProducts){
 
 		});
 		//console.log(allProducts);
-		exportFile(allProducts);
+		exportFile(allProducts); // ** this should be asynch
 	}
 }
 
 function exportFile(allProducts){
 	// export the excell file (CSV), for import into urza
 	console.log('exporting');
+	console.log(allProducts);
+
+	var ret = [];
+	// turn it into the right format
+	for(var i = 0; i < allProducts.length; i++){
+		// one line for each stock row		
+		for(s in allProducts[i]['stock']){
+			console.log('pushing stock');
+			console.log(allProducts[i]['stock'][s]);
+			var thisRet = [
+				allProducts[i]['id'],
+				allProducts[i]['name'],
+				allProducts[i]['set'],
+				allProducts[i]['stock'][s]['condition'],
+				allProducts[i]['stock'][s]['price'],
+				allProducts[i]['stock'][s]['quantity']
+			];
+			ret.push(thisRet);
+		}
+
+		
+	}
+	console.log(ret);
+
 }
