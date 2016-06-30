@@ -10,10 +10,10 @@
 **/
 
 //<input type="button" data-bind="value: DisplayedAction, click: function (data, event) { manageProduct(data.ProductId); }" value="Manage">
-
+var allProducts = [];
 
 function getAllProducts(){
-	var allProducts = [];
+
 
 	// get this page
 	var p = getProductsForPage();
@@ -105,34 +105,50 @@ function striptags(OriginalString = ""){
 function getConditions(allProducts){
 	// https://store.tcgplayer.com/admin/product/manage/39065?OnlyMyInventory=true
 	console.log('getting conditions');
+
+	// build the array of deferred calls
+	
+
+	var getArray = [];
 	for(var i=0; i < 1; i++){ // only one for now
-		console.log('getting stock for ' + allProducts[i]['name']);
-		$.ajax({
-			url:'https://store.tcgplayer.com/admin/product/manage/'+allProducts[i]['id']+'?OnlyMyInventory=true'		
-		}).done(function(data){
-			var table = $(data).find('.display.sTable tbody')
-			var stock = [];
-			$(table).find('tr').each(function(){
-				var thisRow = [];
-				thisRow['condition'] = striptags($(this).find('td:first-child').html());
-				thisRow['quantity'] = $(this).find('td:nth-child(5n) input').val();
-				thisRow['price'] = $(this).find('td:nth-child(6n) input').val()
-				if(thisRow['quantity'] > 0){
-					stock[allProducts[i]['id'] + "_" + thisRow['condition']] = thisRow;
-				}
-				
-			});
-			allProducts[i]['stock'] = stock;
-			
-
-
-		});
+		console.log('queing stock ajax for ' + allProducts[i]['name']);
+		
+		getArray.push(getCondition(allProducts[i], i));
 		//console.log(allProducts);
-		exportFile(allProducts); // ** this should be asynch
+		// trigger all calls
+		$.when.apply($, getArray).done(function(){
+			exportFile(); // ** this should be asynch
+		});
 	}
 }
 
-function exportFile(allProducts){
+function getCondition(product, i) {
+	// the async ajax call here
+	console.log('getting the stock for ' + product['name']);
+	$.ajax({
+		url:'https://store.tcgplayer.com/admin/product/manage/'+product['id']+'?OnlyMyInventory=true'		
+	}).done(function(data){
+		var table = $(data).find('.display.sTable tbody')
+		var stock = [];
+		$(table).find('tr').each(function(){
+			var thisRow = [];
+			thisRow['condition'] = striptags($(this).find('td:first-child').html());
+			thisRow['quantity'] = $(this).find('td:nth-child(5n) input').val();
+			thisRow['price'] = $(this).find('td:nth-child(6n) input').val()
+			if(thisRow['quantity'] > 0){
+				stock[product['id'] + "_" + thisRow['condition']] = thisRow;
+			}
+		
+		});
+		console.log(stock);
+		allProducts[i]['stock'] = stock;
+	
+
+
+	});
+}
+
+function exportFile(){
 	// export the excell file (CSV), for import into urza
 	console.log('exporting');
 	console.log(allProducts);
@@ -157,6 +173,6 @@ function exportFile(allProducts){
 
 		
 	}
-	console.log(ret);
+	//console.log(ret);
 
 }
