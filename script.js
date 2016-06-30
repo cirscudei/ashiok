@@ -9,21 +9,27 @@
  *      to work.
 **/
 
-//<input type="button" data-bind="value: DisplayedAction, click: function (data, event) { manageProduct(data.ProductId); }" value="Manage">
-var allProducts = [];
 
-function getAllProducts(){
+var allProducts = [];
+addInterface();
+var completed = 0;
+var currentPage = 1;
+getAllProducts(); // start it
+
+
+function getAllProducts() {
 
 
 	// get this page
-	var p = getProductsForPage();
-	for(i in p){
+	var p;
+	p = getProductsForPage();
+	for (var i in p){
 		allProducts.push(p[i]);
 	}
 
 	var num = getNumPages();
 
-	for(var i=1; i <= num; i++){
+	for (var i=1; i <= num; i++){
     		setTimeout(function(){
 			getNextPage();
 			var p = getProductsForPage();
@@ -34,11 +40,14 @@ function getAllProducts(){
 		},2000*i);
 	};
 	setTimeout(function(){
+		setStatus("Getting card conditions, this may take up to " + (allProducts.length/60) + " minutes");
+	},2000*num+.5);
+	setTimeout(function(){
 		getConditions(allProducts);
 	},2000*num+1);
-		
 	
-	
+
+
 
 }
 
@@ -50,7 +59,7 @@ function getProductsForPage() {
 		$(this).find('td').each(function(){
 			row.push($(this).html());
 			if($(this).attr('id')){
-			
+		
 				id = $(this).attr('id');
 				id = id.replace(/^.*_/,"");
 			}
@@ -75,6 +84,7 @@ function getProductsForPage() {
 
 // get the total number of pages
 function getNextPage(){
+	setStatus('Getting Page ' + currentPage + " ("+ allProducts.length + " total products)");
 	var nextLink;
 	$('.pager a').each(function(){
 		if($(this).html() == "Next"){
@@ -84,8 +94,9 @@ function getNextPage(){
 	});
 
 
-	if(!nextLink.hasClass('ui-state-disabled')){
+	if(!nextLink.hasClass('ui-state-disabled')){	
 		nextLink.click();
+		currentPage++;
 		return true;
 	} else {
 		return false;
@@ -107,27 +118,24 @@ function getConditions(allProducts){
 	console.log('getting conditions');
 
 	// build the array of deferred calls
-	
+
 
 	var getArray = [];
-	for(var i=0; i < 3; i++){ // only one for now
-		console.log('queing stock ajax for ' + allProducts[i]['name']);
-		
+	for(var i=0; i < allProducts.length; i++){ 
 		getArray.push(getCondition(allProducts[i], i));
-		//console.log(allProducts);
-		// trigger all calls
 
 	}
+	// wait until all the calls are done
 	$.when.apply($, getArray).done(exportFile);
 }
 
 function getCondition(product, i) {
 	// the async ajax call here
-	console.log('getting the stock for ' + product['name']);
 	$.ajax({
 		url:'https://store.tcgplayer.com/admin/product/manage/'+product['id']+'?OnlyMyInventory=true'	,
 		async:false,	
-	}).done(function(data){
+	}).success(function(data){
+
 		var table = $(data).find('.display.sTable tbody')
 		var stock = [];
 		$(table).find('tr').each(function(){
@@ -138,10 +146,9 @@ function getCondition(product, i) {
 			if(thisRow['quantity'] > 0){
 				stock[product['id'] + "_" + thisRow['condition']] = thisRow;
 			}
-		
+	
 		});
 		allProducts[i]['stock'] = stock;
-
 
 	});
 }
@@ -170,9 +177,9 @@ function exportFile(){
 			console.log(thisRet);
 		}
 
-		
+	
 	}
-	console.log(list);
+	//console.log(list);
 	var csvContent = "data:text/csv;charset=utf-8,";
 	list.forEach(function(infoArray, index){
 
@@ -181,12 +188,17 @@ function exportFile(){
 
 	}); 
 
-	// download it
+	// download itsetStatus
+	setStatus("DONE!");
 	var encodedUri = encodeURI(csvContent);
 	var link = document.createElement("a");
 	link.setAttribute("href", encodedUri);
+	var linkText = document.createTextNode("Download Inventory");
+	a.appendChild(linkText);
 	link.setAttribute("download", getFileName());
 	document.body.appendChild(link); // Required for FF
+
+
 
 	link.click(); // This will download the data file named "my_data.csv".	var encodedUri = encodeURI(csvContent);
 }
@@ -198,11 +210,26 @@ function getFileName(){
 
     var yyyy = today.getFullYear();
     if(dd<10){
-        dd='0'+dd
+	dd='0'+dd
     } 
     if(mm<10){
-        mm='0'+mm
+	mm='0'+mm
     } 
     var today = dd+'_'+mm+'_'+yyyy+'_tcg_inventory.csv';
 	return today;
+}
+
+function addInterface(){
+
+	var barHtml = '<div id="exportWrap"><p style="text-align: center;">Exporting Inventory, please wait.</p><p style="text-align: center;" id="status"></p><p style="text-align: center;"></div>';
+
+	$('body > *:first-child').before(barHtml);
+
+	$('#exportWrap').css('padding','1em');	
+	$('#exportWrap').css('margin','1em');
+	$('#exportWrap').css('background-color','#ccc');
+}
+
+function setStatus(str){
+	$('#status').html(str);
 }
