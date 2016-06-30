@@ -21,7 +21,9 @@ function getAllProducts(){
 		allProducts.push(p[i]);
 	}
 
-	for(var i=1; i <= getNumPages(); i++){
+	var num = getNumPages();
+
+	for(var i=1; i <= num; i++){
     		setTimeout(function(){
 			getNextPage();
 			var p = getProductsForPage();
@@ -31,6 +33,9 @@ function getAllProducts(){
 			console.log(allProducts);
 		},2000*i);
 	};
+	setTimeout(function(){
+		getConditions(allProducts);
+	},2000*num+1);
 		
 	
 	
@@ -95,6 +100,22 @@ function striptags(OriginalString = ""){
 	var StrippedString = OriginalString.replace(/(<([^>]+)>)/ig,"");
 	var ret = StrippedString.replace(/[^-0-9a-zA-Z']/ig,"")
 	return ret;
+}
+
+function getConditions(allProducts){
+	// https://store.tcgplayer.com/admin/product/manage/39065?OnlyMyInventory=true
+	console.log('getting conditions');
+	for(var i=0; i < 2; i++){
+		$.ajax({
+			url:'https://store.tcgplayer.com/admin/product/manage/'+allProducts[i]['id']+'?OnlyMyInventory=true'		
+		}).done(function(data){
+			var table = $(data).find('.display.sTable')
+			console.log(table);
+
+
+
+		});
+	}
 }
 
 
