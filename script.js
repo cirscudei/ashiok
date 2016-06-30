@@ -110,23 +110,23 @@ function getConditions(allProducts){
 	
 
 	var getArray = [];
-	for(var i=0; i < 1; i++){ // only one for now
+	for(var i=0; i < 3; i++){ // only one for now
 		console.log('queing stock ajax for ' + allProducts[i]['name']);
 		
 		getArray.push(getCondition(allProducts[i], i));
 		//console.log(allProducts);
 		// trigger all calls
-		$.when.apply($, getArray).done(function(){
-			exportFile(); // ** this should be asynch
-		});
+
 	}
+	$.when.apply($, getArray).done(exportFile);
 }
 
 function getCondition(product, i) {
 	// the async ajax call here
 	console.log('getting the stock for ' + product['name']);
 	$.ajax({
-		url:'https://store.tcgplayer.com/admin/product/manage/'+product['id']+'?OnlyMyInventory=true'		
+		url:'https://store.tcgplayer.com/admin/product/manage/'+product['id']+'?OnlyMyInventory=true'	,
+		async:false,	
 	}).done(function(data){
 		var table = $(data).find('.display.sTable tbody')
 		var stock = [];
@@ -140,9 +140,7 @@ function getCondition(product, i) {
 			}
 		
 		});
-		console.log(stock);
 		allProducts[i]['stock'] = stock;
-	
 
 
 	});
@@ -151,15 +149,15 @@ function getCondition(product, i) {
 function exportFile(){
 	// export the excell file (CSV), for import into urza
 	console.log('exporting');
-	console.log(allProducts);
+	//console.log(allProducts);
 
-	var ret = [];
+	var list = [];
 	// turn it into the right format
 	for(var i = 0; i < allProducts.length; i++){
 		// one line for each stock row		
 		for(s in allProducts[i]['stock']){
 			console.log('pushing stock');
-			console.log(allProducts[i]['stock'][s]);
+			//console.log(allProducts[i]['stock'][s]);
 			var thisRet = [
 				allProducts[i]['id'],
 				allProducts[i]['name'],
@@ -168,11 +166,43 @@ function exportFile(){
 				allProducts[i]['stock'][s]['price'],
 				allProducts[i]['stock'][s]['quantity']
 			];
-			ret.push(thisRet);
+			list.push(thisRet);
+			console.log(thisRet);
 		}
 
 		
 	}
-	//console.log(ret);
+	console.log(list);
+	var csvContent = "data:text/csv;charset=utf-8,";
+	list.forEach(function(infoArray, index){
 
+	   dataString = infoArray.join(",");
+	   csvContent += index < list.length ? dataString+ "\n" : dataString;
+
+	}); 
+
+	// download it
+	var encodedUri = encodeURI(csvContent);
+	var link = document.createElement("a");
+	link.setAttribute("href", encodedUri);
+	link.setAttribute("download", getFileName());
+	document.body.appendChild(link); // Required for FF
+
+	link.click(); // This will download the data file named "my_data.csv".	var encodedUri = encodeURI(csvContent);
+}
+
+function getFileName(){
+	var today = new Date();
+    var dd = today.getDate();
+    var mm = today.getMonth()+1; //January is 0!
+
+    var yyyy = today.getFullYear();
+    if(dd<10){
+        dd='0'+dd
+    } 
+    if(mm<10){
+        mm='0'+mm
+    } 
+    var today = dd+'_'+mm+'_'+yyyy+'_tcg_inventory.csv';
+	return today;
 }
