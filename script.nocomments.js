@@ -3,6 +3,8 @@ addInterface();
 var completed = 0;
 var currentPage = 1;
 getAllProducts();
+
+
 function getAllProducts() {
   var p;
   p = getProductsForPage();
@@ -80,14 +82,19 @@ function striptags(OriginalString) {
 }
 function getConditions(allProducts) {
   console.log("getting conditions");
+  var def = $.Deferred();
   var getArray = [];
-  for (var i = 0;i < allproducts.length ;i++) {
+  for (var i = 0;i < allProducts.length ;i++) {
     getArray.push(getCondition(allProducts[i], i));
   }
-  $.when.apply($, getArray).done(exportFile);
+  $.when.apply($, getArray).then(function() { def.resolve(); });
+  return def.promise();
 }
 function getCondition(product, i) {
-  $.ajax({url:"https://store.tcgplayer.com/admin/product/manage/" + product["id"] + "?OnlyMyInventory=true", async:false}).success(function(data) {
+  var def = $.Deferred();
+  var promise = $.ajax({url:"https://store.tcgplayer.com/admin/product/manage/" + product["id"] + "?OnlyMyInventory=true", async:true}).success(function(data) {
+    completed++;
+    updateProgress();
     var table = $(data).find(".display.sTable tbody");
     var stock = [];
     $(table).find("tr").each(function() {
@@ -101,6 +108,10 @@ function getCondition(product, i) {
     });
     allProducts[i]["stock"] = stock;
   });
+  $.when(promise).done(function() {
+    def.resolve();
+  });
+  return def.promise();
 }
 function exportFile() {
   console.log("exporting");
@@ -143,13 +154,25 @@ function getFileName() {
   return today;
 }
 function addInterface() {
-  var barHtml = '<div id="exportWrap"><p style="text-align: center;">Exporting Inventory, please wait.</p><p style="text-align: center;" id="status"></p><p style="text-align: center;"></div>';
+  var barHtml = '<div id="exportWrap"><p style="text-align: center;">Exporting Inventory, please wait.</p><div id="progress"><div class="bar"></div></div><p style="text-align: center;" id="status"></p><p style="text-align: center;"></div>';
   $("body > *:first-child").before(barHtml);
   $("#exportWrap").css("padding", "1em");
   $("#exportWrap").css("margin", "1em");
   $("#exportWrap").css("background-color", "#ccc");
+
+  $("#progress").css('background-color','#fff');
+  $("#progress").css('padding','.5em');
+  $("#progress .bar").css('width','0%');
+  $("#progress .bar").css('background-color','blue');
+  $("#progress .bar").css('height','1em');
+
+
 }
 function setStatus(str) {
   $("#status").html(str);
 }
-;
+
+function updateProgress(){
+	console.log('Progress:' + completed/allProducts.lengt);
+	$('#progress .bar').css('width',completed/allProducts.length+"%");	
+}
