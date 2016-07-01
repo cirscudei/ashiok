@@ -23,10 +23,13 @@ function getAllProducts() {
     }, 2E3 * i);
   }
   setTimeout(function() {
-    setStatus("Getting card conditions, this may take up to " + allProducts.length / 60 + " minutes");
+    setStatus("Getting card conditions (" + allProducts.length + "), this may take up to " + allProducts.length / 60 + " minutes");
   }, 2E3 * num + .5);
   setTimeout(function() {
-    getConditions(allProducts);
+    var promise = getConditions(allProducts);
+    $.when(promise).done(function(){
+      exportFile();
+    });
   }, 2E3 * num + 1);
 }
 function getProductsForPage() {
@@ -129,15 +132,27 @@ function exportFile() {
     dataString = infoArray.join(",");
     csvContent += index < list.length ? dataString + "\n" : dataString;
   });
-  setStatus("DONE!");
+  setStatus("");
   var encodedUri = encodeURI(csvContent);
   var link = document.createElement("a");
   link.setAttribute("href", encodedUri);
+    link.setAttribute("id", "downloadLink");
   var linkText = document.createTextNode("Download Inventory");
   link.appendChild(linkText);
   link.setAttribute("download", getFileName());
-  document.body.appendChild(link);
-  link.click();
+  $('#exportWrap #status').append(link);
+  $('#downloadLink').css({
+    padding: '2px 10px 8px 10px',
+    height: '15px',
+    display: 'inline-block',
+    border: '1px solid #447fac',
+    'border-radius': '3px',
+    cursor: 'pointer',
+    background: '#72b8e4 url(../Content/images/backgrounds/titleBgBlue.jpg) repeat-x',
+    color: '#fff',
+    margin: '1em auto'
+    
+  });
 }
 function getFileName() {
   var today = new Date;
@@ -154,16 +169,18 @@ function getFileName() {
   return today;
 }
 function addInterface() {
-  var barHtml = '<div id="exportWrap"><p style="text-align: center;">Exporting Inventory, please wait.</p><div id="progress"><div class="bar"></div></div><p style="text-align: center;" id="status"></p><p style="text-align: center;"></div>';
+  var barHtml = '<div id="exportWrap"><p style="text-align: center; margin-bottom:1em;">Exporting Inventory, please wait: <b>DO NOTHING!</b></p><div id="progress"><div class="bar"><div class="caption" style="text-align: center; position: absolute; left: 0px; right: 0px; text-shadow: 1px 1px #fff;line-height: 2em; top: 0px;"></div></div></div><p style="text-align: center;" id="status"></p><div style="float: right; color: #666;padding-top: 1em;">Compliments of <a href="http://urza.com?ref=tcg_extractor">Urza.com</a></div></div>';
   $("body > *:first-child").before(barHtml);
   $("#exportWrap").css("padding", "1em");
   $("#exportWrap").css("margin", "1em");
   $("#exportWrap").css("background-color", "#ccc");
+  $("#exportWrap").css("text-align", "center");
 
   $("#progress").css('background-color','#fff');
+  $("#progress").css('position','relative');
   $("#progress").css('padding','.5em');
   $("#progress .bar").css('width','0%');
-  $("#progress .bar").css('background-color','blue');
+  $("#progress .bar").css('background-color','#72b8e4');
   $("#progress .bar").css('height','1em');
 
 
@@ -173,6 +190,7 @@ function setStatus(str) {
 }
 
 function updateProgress(){
-	console.log('Progress:' + completed/allProducts.lengt);
-	$('#progress .bar').css('width',completed/allProducts.length+"%");	
+	console.log('Progress:' + completed/allProducts.length*100 + '%');
+	$('#progress .caption').html(completed + "/" + allProducts.length);
+	$('#progress .bar').css('width',completed/allProducts.length*100+"%");	
 }
